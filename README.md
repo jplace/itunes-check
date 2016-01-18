@@ -17,7 +17,8 @@ Expected Runtime
 Took 1.5 hours when run against my iTunes library of over 8,000 songs.
 My iTunes library is stored on a commodity USB Flash drive.
 
-Bugs
+Bugs / Notes
 -----------------
 - The lack of progress reporting is pretty terrible.
 - Most audio files found were not playable by iTunes, but some were (these files had corruptions in their album art).
+- I have no idea if the parallelism helps or hurts performance. I assumed ffmpeg was CPU-intensive, but I have not confiremed this.
