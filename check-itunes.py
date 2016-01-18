@@ -5,6 +5,7 @@ import subprocess
 import multiprocessing
 import time
 from contextlib import contextmanager
+import itertools
 
 # case-insensitive set of file extensions to classify as media
 EXTENSIONS = set(['.wav', '.mp3', '.aif', '.m4a', '.m4v', '.m4r', '.m4p', '.aiff', '.mp4'])
@@ -12,42 +13,38 @@ EXTENSIONS = set(['.wav', '.mp3', '.aif', '.m4a', '.m4v', '.m4r', '.m4p', '.aiff
 # pointer to /dev/null
 FNULL = None
 
-# root of provided path to traverse
-ROOT = ""
 
 def main():
-	global FNULL, ROOT
+	global FNULL
 
-	parser = argparse.ArgumentParser(description="This script traverse a directory containing media files. It prints the name of any media file ffmpeg deems corrupt to stdout.")
-	parser.add_argument("path", help="The directory containing the media files to check.", type=str)
+	parser = argparse.ArgumentParser(description="This script prints the names of any media file ffmpeg deems corrupt to stdout.")
+	parser.add_argument("path", help="A file or directory referencing media files to check", type=str)
 	args = parser.parse_args()
 	path = args.path
 
 	FNULL = open(os.devnull, 'w')
 
-	with measureTime("directory walk"):
+	with measureTime("file processing"):
 		# if just a file path has been provided, put it in a list
-		# otherwise, walk the directory provided and set the ROOT
+		# otherwise, chain iterables
 		files = None
 		if os.path.isfile(path):
 			files = [path]
 		elif os.path.isdir(path):
-			ROOT, _, files = os.walk(path)
+			walk = os.walk(path)
+			files = itertools.chain.from_iterable((os.path.join(root, file) for file in files) for root, dirs, files in walk)
 		else:
 			print_error("Path is not a file or directory: " + path)
 			sys.exit(1)
 
-	with measureTime("file processing"):
 		# process all retrieved files
 		multiprocessing.Pool(5).map(process_file, files)
+
 
 """
 Input: A path to a file to check for integrity
 """
 def process_file(path):
-	# prepend ROOT to provided path
-	path = os.path.join(ROOT, path)
-
 	# get file extension and normalize it
 	_, extension = os.path.splitext(path)
 	extension = extension.lower()
